@@ -11,15 +11,8 @@ interface SplashLoaderProps {
 export default function SplashLoader({ onComplete, siteName }: SplashLoaderProps) {
   const [percent, setPercent] = useState(0);
   const [ready, setReady] = useState(false);
-  const [subheading, setSubheading] = useState("initializing memory reels...");
 
   useEffect(() => {
-    const subheadings = [
-      "loading ambient frequencies...",
-      "streaming high-fidelity visuals...",
-      "polishing glass surfaces..."
-    ];
-
     const interval = setInterval(() => {
       setPercent((prev) => {
         if (prev >= 100) {
@@ -30,13 +23,6 @@ export default function SplashLoader({ onComplete, siteName }: SplashLoaderProps
         // Random incremental values for natural feel
         const step = Math.floor(Math.random() * 8) + 4;
         const nextValue = Math.min(prev + step, 100);
-        
-        // Update subheading text based on percentage milestones
-        const subIndex = Math.min(
-          Math.floor((nextValue / 100) * subheadings.length),
-          subheadings.length - 1
-        );
-        setSubheading(subheadings[subIndex]);
 
         return nextValue;
       });
@@ -65,24 +51,10 @@ export default function SplashLoader({ onComplete, siteName }: SplashLoaderProps
           initial={{ letterSpacing: "0.2em", opacity: 0 }}
           animate={{ letterSpacing: "0.3em", opacity: 1 }}
           transition={{ duration: 1.5 }}
-          className="text-2xl md:text-3xl font-display font-light uppercase tracking-[0.3em] mb-2 text-[#4a0e17] mt-8"
+          className="text-2xl md:text-3xl font-display font-light uppercase tracking-[0.3em] mb-12 text-[#4a0e17] mt-8"
         >
           {siteName || "SILENT REELS"}
         </motion.h1>
-
-        {/* Loading status text */}
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={subheading}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 0.65, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: 0.3 }}
-            className="text-xs font-mono lowercase tracking-wider text-[#9a5460] h-6 mb-12"
-          >
-            {subheading}
-          </motion.p>
-        </AnimatePresence>
 
         {/* Unlocking User Gesture Button */}
         <div className="h-16 flex items-center justify-center w-full">
