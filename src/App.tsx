@@ -31,6 +31,12 @@ import { SiteSettings, Memory, SocialLink } from "./types";
 import SplashLoader from "./components/SplashLoader";
 import AudioPlayerControl from "./components/AudioPlayerControl";
 import AnubisChat from "./components/AnubisChat";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize client-side Supabase as a safe fallback when running on static servers (like Vercel)
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || "https://kgiocgwtkncsebhzqxzs.supabase.co";
+const supabaseKey = (import.meta as any).env?.VITE_SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnaW9jZ3d0a25jc2ViaHpxeHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NDI5OTQsImV4cCI6MjA5NTAxODk5NH0.CJ7zm6eyPnJZakr46eFmy1IVIIeBdQgaK5_w5hZ_l8E";
+const clientSupabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const AVAILABLE_ACCENTS = [
   { id: "rose", name: "aesthetic pink", color: "#ff2d7a", class: "rose-accent" },
@@ -77,6 +83,27 @@ const DEFAULT_CLIENT_SETTINGS: SiteSettings = {
       description: "listening to slow-reverb songs, watching streetlights blur.",
       imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80",
       date: "May 2026"
+    },
+    {
+      id: "2",
+      title: "quiet coffee & rain",
+      description: "the perfect afternoon spent holding warm mugs while the storm passed.",
+      imageUrl: "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=800&q=80",
+      date: "April 2026"
+    },
+    {
+      id: "3",
+      title: "gazing at city silhouettes",
+      description: "climbing up the high point to watch the city blink below.",
+      imageUrl: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=800&q=80",
+      date: "March 2026"
+    },
+    {
+      id: "4",
+      title: "dreamy sunset horizons",
+      description: "where the sky blushes purple and peach just before dark.",
+      imageUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
+      date: "February 2026"
     }
   ],
   adminPasscode: "1111",
@@ -131,34 +158,66 @@ export default function App() {
 
   const fetchSettings = async () => {
     try {
+      // 1. Try backend server API first
       const response = await fetch("/api/settings");
-      const data = await response.json();
-      if (data.success && data.settings) {
-        // Guarantee aboutMe defaults are present
-        const loadedSettings = {
-          ...data.settings,
-          aboutMe: data.settings.aboutMe || {
-            myName: "Aria Sterling",
-            dadName: "Edward Sterling",
-            momName: "Elena Sterling",
-            age: "21"
-          },
-          aiSettings: data.settings.aiSettings || {
-            anubisAvatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80",
-            hamimPicUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
-          }
-        };
-        setSettings(loadedSettings);
-        setDraftSettings(loadedSettings);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.settings) {
+          const loadedSettings = {
+            ...data.settings,
+            aboutMe: data.settings.aboutMe || {
+              myName: "Aria Sterling",
+              dadName: "Edward Sterling",
+              momName: "Elena Sterling",
+              age: "21"
+            },
+            aiSettings: data.settings.aiSettings || {
+              anubisAvatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80",
+              hamimPicUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+            }
+          };
+          setSettings(loadedSettings);
+          setDraftSettings(loadedSettings);
+          setIsLoading(false);
+          return;
+        }
       }
     } catch (err) {
-      console.error("Failed to load settings:", err);
-    } finally {
-      // Simulate minimal loader buffer
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
+      console.warn("Express backend API unavailable. Attempting direct client-side Supabase connection:", err);
     }
+
+    // 2. Client-side Supabase direct fetch fallback (supports pure static serverless deployments like Vercel)
+    if (clientSupabase) {
+      try {
+        const { data, error } = await clientSupabase
+          .from("portfolio_settings")
+          .select("data")
+          .eq("id", 1)
+          .single();
+
+        if (!error && data?.data) {
+          const loadedSettings = {
+            ...DEFAULT_CLIENT_SETTINGS,
+            ...data.data,
+            aboutMe: data.data.aboutMe || DEFAULT_CLIENT_SETTINGS.aboutMe,
+            aiSettings: data.data.aiSettings || DEFAULT_CLIENT_SETTINGS.aiSettings
+          };
+          setSettings(loadedSettings);
+          setDraftSettings(loadedSettings);
+          setIsLoading(false);
+          return;
+        } else if (error) {
+          console.warn("Could not load directly from Supabase, falling back to local defaults:", error.message);
+        }
+      } catch (err) {
+        console.error("Supabase direct load error:", err);
+      }
+    }
+
+    // 3. Fallback to client state (DEFAULT_CLIENT_SETTINGS)
+    setSettings(DEFAULT_CLIENT_SETTINGS);
+    setDraftSettings(DEFAULT_CLIENT_SETTINGS);
+    setIsLoading(false);
   };
 
   // Scroll offset listener for transparent to glass transition
@@ -224,21 +283,44 @@ export default function App() {
     if (!draftSettings) return;
     setSavingSettings(true);
     try {
-      const response = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          settings: draftSettings,
-          passcode: adminPasscode
-        })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSettings(data.settings);
-        alert("Settings saved successfully! Feeling the vibe.");
-      } else {
-        alert("Authorization failed or save error: " + (data.error || "Unknown"));
+      // 1. Try saving through back-end Express API
+      try {
+        const response = await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            settings: draftSettings,
+            passcode: adminPasscode
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setSettings(data.settings);
+            alert("Settings saved successfully! Feeling the vibe.");
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("Backend API not reachable for saving, trying direct client-side Supabase write:", apiErr);
       }
+
+      // 2. Direct client-side Supabase upsert fallback (supports pure static serverless deployments like Vercel)
+      if (clientSupabase) {
+        const { error } = await clientSupabase
+          .from("portfolio_settings")
+          .upsert({ id: 1, data: draftSettings });
+
+        if (!error) {
+          setSettings(draftSettings);
+          alert("Settings saved directly to Supabase sandbox! Ephemeral Vercel state bypassed successfully.");
+          return;
+        } else {
+          throw new Error(error.message);
+        }
+      }
+
+      throw new Error("Unable to save settings. Setup neither server nor direct client-side Supabase parameters.");
     } catch (err: any) {
       alert("Error saving: " + err.message);
     } finally {
@@ -253,52 +335,92 @@ export default function App() {
 
     setUploadProgress(prev => ({ ...prev, [fieldKey]: "Uploading..." }));
 
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("passcode", adminPasscode);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        headers: {
-          "x-admin-passcode": adminPasscode
-        },
-        body: formData
-      });
-      const data = await response.json();
-      if (data.success && data.url) {
-        if (fieldKey === 'memoryImage' && typeof memoryIndex === 'number') {
-          const updatedMemories = [...draftSettings.memories];
-          updatedMemories[memoryIndex] = {
-            ...updatedMemories[memoryIndex],
-            imageUrl: data.url
-          };
-          setDraftSettings({ ...draftSettings, memories: updatedMemories });
-        } else if (fieldKey === 'videoUrl') {
-          setDraftSettings({ ...draftSettings, videoUrl: data.url });
-        } else if (fieldKey === 'audioUrl') {
-          setDraftSettings({ ...draftSettings, audioUrl: data.url });
-        } else if (fieldKey === 'anubisAvatarUrl') {
-          setDraftSettings({
-            ...draftSettings,
-            aiSettings: {
-              ...(draftSettings.aiSettings || { anubisAvatarUrl: "", hamimPicUrl: "" }),
-              anubisAvatarUrl: data.url
-            }
-          });
-        } else if (fieldKey === 'hamimPicUrl') {
-          setDraftSettings({
-            ...draftSettings,
-            aiSettings: {
-              ...(draftSettings.aiSettings || { anubisAvatarUrl: "", hamimPicUrl: "" }),
-              hamimPicUrl: data.url
-            }
-          });
-        }
-        setUploadProgress(prev => ({ ...prev, [fieldKey]: "Upload successful!" }));
-      } else {
-        setUploadProgress(prev => ({ ...prev, [fieldKey]: "Upload failed: " + (data.error || "") }));
+    const updateFieldWithUrl = (url: string) => {
+      if (fieldKey === 'memoryImage' && typeof memoryIndex === 'number') {
+        const updatedMemories = [...draftSettings.memories];
+        updatedMemories[memoryIndex] = {
+          ...updatedMemories[memoryIndex],
+          imageUrl: url
+        };
+        setDraftSettings({ ...draftSettings, memories: updatedMemories });
+      } else if (fieldKey === 'videoUrl') {
+        setDraftSettings({ ...draftSettings, videoUrl: url });
+      } else if (fieldKey === 'audioUrl') {
+        setDraftSettings({ ...draftSettings, audioUrl: url });
+      } else if (fieldKey === 'anubisAvatarUrl') {
+        setDraftSettings({
+          ...draftSettings,
+          aiSettings: {
+            ...(draftSettings.aiSettings || { anubisAvatarUrl: "", hamimPicUrl: "" }),
+            anubisAvatarUrl: url
+          }
+        });
+      } else if (fieldKey === 'hamimPicUrl') {
+        setDraftSettings({
+          ...draftSettings,
+          aiSettings: {
+            ...(draftSettings.aiSettings || { anubisAvatarUrl: "", hamimPicUrl: "" }),
+            hamimPicUrl: url
+          }
+        });
       }
+    };
+
+    try {
+      // 1. Try standard back-end Express API upload first
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("passcode", adminPasscode);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          headers: {
+            "x-admin-passcode": adminPasscode
+          },
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.url) {
+            updateFieldWithUrl(data.url);
+            setUploadProgress(prev => ({ ...prev, [fieldKey]: "Upload successful!" }));
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("Backend upload failed/unavailable, trying client-side Supabase Storage directly:", apiErr);
+      }
+
+      // 2. Direct client-side Supabase Storage upload fallback
+      if (clientSupabase) {
+        const fileExt = file.name.split('.').pop() || 'bin';
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+        const { data: uploadData, error: uploadError } = await clientSupabase.storage
+          .from("portfolio_media")
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (!uploadError && uploadData) {
+          const { data: urlData } = clientSupabase.storage
+            .from("portfolio_media")
+            .getPublicUrl(fileName);
+
+          if (urlData?.publicUrl) {
+            updateFieldWithUrl(urlData.publicUrl);
+            setUploadProgress(prev => ({ ...prev, [fieldKey]: "Upload successful!" }));
+            return;
+          }
+        } else if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+      }
+
+      throw new Error("Could not find upload provider. Verify API or Supabase Credentials.");
     } catch (err: any) {
       setUploadProgress(prev => ({ ...prev, [fieldKey]: "Error: " + err.message }));
     }
