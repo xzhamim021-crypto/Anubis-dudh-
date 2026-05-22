@@ -134,7 +134,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"general" | "multimedia" | "memories" | "about">("general");
 
   // Local settings copy for updates
-  const [draftSettings, setDraftSettings] = useState<SiteSettings | null>(null);
+  const [draftSettings, setDraftSettings] = useState<SiteSettings>(DEFAULT_CLIENT_SETTINGS);
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: string }>({});
 
@@ -163,18 +163,20 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.settings) {
-          const loadedSettings = {
+          const loadedSettings: SiteSettings = {
+            ...DEFAULT_CLIENT_SETTINGS,
             ...data.settings,
-            aboutMe: data.settings.aboutMe || {
-              myName: "Aria Sterling",
-              dadName: "Edward Sterling",
-              momName: "Elena Sterling",
-              age: "21"
+            aboutMe: {
+              ...DEFAULT_CLIENT_SETTINGS.aboutMe,
+              ...(data.settings.aboutMe || {})
             },
-            aiSettings: data.settings.aiSettings || {
-              anubisAvatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80",
-              hamimPicUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
-            }
+            aiSettings: {
+              ...DEFAULT_CLIENT_SETTINGS.aiSettings,
+              ...(data.settings.aiSettings || {})
+            },
+            socialLinks: data.settings.socialLinks || DEFAULT_CLIENT_SETTINGS.socialLinks || [],
+            memories: data.settings.memories || DEFAULT_CLIENT_SETTINGS.memories || [],
+            floatingQuotes: data.settings.floatingQuotes || DEFAULT_CLIENT_SETTINGS.floatingQuotes || []
           };
           setSettings(loadedSettings);
           setDraftSettings(loadedSettings);
@@ -196,11 +198,20 @@ export default function App() {
           .single();
 
         if (!error && data?.data) {
-          const loadedSettings = {
+          const loadedSettings: SiteSettings = {
             ...DEFAULT_CLIENT_SETTINGS,
             ...data.data,
-            aboutMe: data.data.aboutMe || DEFAULT_CLIENT_SETTINGS.aboutMe,
-            aiSettings: data.data.aiSettings || DEFAULT_CLIENT_SETTINGS.aiSettings
+            aboutMe: {
+              ...DEFAULT_CLIENT_SETTINGS.aboutMe,
+              ...(data.data.aboutMe || {})
+            },
+            aiSettings: {
+              ...DEFAULT_CLIENT_SETTINGS.aiSettings,
+              ...(data.data.aiSettings || {})
+            },
+            socialLinks: data.data.socialLinks || DEFAULT_CLIENT_SETTINGS.socialLinks || [],
+            memories: data.data.memories || DEFAULT_CLIENT_SETTINGS.memories || [],
+            floatingQuotes: data.data.floatingQuotes || DEFAULT_CLIENT_SETTINGS.floatingQuotes || []
           };
           setSettings(loadedSettings);
           setDraftSettings(loadedSettings);
