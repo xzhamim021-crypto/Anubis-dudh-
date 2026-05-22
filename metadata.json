@@ -1,0 +1,6 @@
+{
+  "name": "Cinematic Portfolio",
+  "description": "A premium, dark-themed personal cinematic portfolio featuring a fullscreen auto-playing video, ambient volume fade-in music, floating poetic subtitles, and a hidden admin settings panel to manage media and content without code changes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
