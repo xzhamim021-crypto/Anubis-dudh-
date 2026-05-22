@@ -111,7 +111,11 @@ const DEFAULT_CLIENT_SETTINGS: SiteSettings = {
     myName: "Aria Sterling",
     dadName: "Edward Sterling",
     momName: "Elena Sterling",
-    age: "21"
+    age: "21",
+    customFields: [
+      { id: "f1", label: "Profession", value: "Digital Artist" },
+      { id: "f2", label: "Favorite Space", value: "Neon-lit studio at 2 AM" }
+    ]
   },
   aiSettings: {
     anubisAvatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80",
@@ -616,6 +620,12 @@ export default function App() {
                 <span className="text-[10px] font-mono uppercase tracking-widest block text-[#9a5460]">Mom's Name</span>
                 <span className="text-lg font-display text-[#4a0e17] font-medium">{settings.aboutMe?.momName || "Elena Sterling"}</span>
               </div>
+              {settings.aboutMe?.customFields?.map((field) => (
+                <div key={field.id} className="p-5 rounded-2xl bg-white/40 border border-pink-200/50 space-y-1.5 hover:bg-white/70 transition-all duration-300">
+                  <span className="text-[10px] font-mono uppercase tracking-widest block text-[#9a5460]">{field.label}</span>
+                  <span className="text-lg font-display text-[#4a0e17] font-medium">{field.value}</span>
+                </div>
+              ))}
             </div>
           </motion.div>
         </section>
@@ -1176,7 +1186,7 @@ export default function App() {
                           />
                         </div>
 
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 font-sans">
                           <label className="text-[10px] font-mono text-neutral-400 uppercase">Mom's Name</label>
                           <input
                             type="text"
@@ -1191,6 +1201,99 @@ export default function App() {
                             className="w-full p-3.5 rounded-xl glass-input text-sm"
                             placeholder="Mom's name"
                           />
+                        </div>
+
+                        {/* Custom dynamic fields */}
+                        <div className="border-t border-white/10 pt-4 space-y-3 font-sans">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider block">Custom Fields</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const existingAbout = draftSettings.aboutMe || { myName: "", dadName: "", momName: "", age: "" };
+                                const existingFields = existingAbout.customFields || [];
+                                const newField = {
+                                  id: Date.now().toString(),
+                                  label: "Custom Field Name",
+                                  value: "Custom Value"
+                                };
+                                setDraftSettings({
+                                  ...draftSettings,
+                                  aboutMe: {
+                                    ...existingAbout,
+                                    customFields: [...existingFields, newField]
+                                  }
+                                });
+                              }}
+                              className="text-[10px] font-mono text-[#ff2d7a] uppercase hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3 text-[#ff2d7a]" /> Add Field
+                            </button>
+                          </div>
+
+                          {(draftSettings.aboutMe?.customFields || []).length === 0 ? (
+                            <p className="text-xs text-neutral-500 italic font-mono">No custom fields yet. Click 'Add Field' to add some.</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {(draftSettings.aboutMe?.customFields || []).map((field, fieldIdx) => (
+                                <div key={field.id || fieldIdx} className="flex gap-2 items-end bg-white/5 p-3 rounded-xl border border-white/5">
+                                  <div className="flex-1 space-y-1.5">
+                                    <label className="text-[9px] font-mono text-neutral-500 uppercase">Field Name</label>
+                                    <input
+                                      type="text"
+                                      value={field.label}
+                                      onChange={(e) => {
+                                        const existingAbout = draftSettings.aboutMe || { myName: "", dadName: "", momName: "", age: "" };
+                                        const updatedFields = (existingAbout.customFields || []).map(f => 
+                                          f.id === field.id ? { ...f, label: e.target.value } : f
+                                        );
+                                        setDraftSettings({
+                                          ...draftSettings,
+                                          aboutMe: { ...existingAbout, customFields: updatedFields }
+                                        });
+                                      }}
+                                      className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 text-xs border border-white/10 text-white"
+                                      placeholder="FieldName (e.g. Profession)"
+                                    />
+                                  </div>
+                                  <div className="flex-1 space-y-1.5">
+                                    <label className="text-[9px] font-mono text-neutral-500 uppercase">Value</label>
+                                    <input
+                                      type="text"
+                                      value={field.value}
+                                      onChange={(e) => {
+                                        const existingAbout = draftSettings.aboutMe || { myName: "", dadName: "", momName: "", age: "" };
+                                        const updatedFields = (existingAbout.customFields || []).map(f => 
+                                          f.id === field.id ? { ...f, value: e.target.value } : f
+                                        );
+                                        setDraftSettings({
+                                          ...draftSettings,
+                                          aboutMe: { ...existingAbout, customFields: updatedFields }
+                                        });
+                                      }}
+                                      className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 text-xs border border-white/10 text-white"
+                                      placeholder="Value"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const existingAbout = draftSettings.aboutMe || { myName: "", dadName: "", momName: "", age: "" };
+                                      const filteredFields = (existingAbout.customFields || []).filter(f => f.id !== field.id);
+                                      setDraftSettings({
+                                        ...draftSettings,
+                                        aboutMe: { ...existingAbout, customFields: filteredFields }
+                                      });
+                                    }}
+                                    className="p-2 text-rose-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg cursor-pointer transition-colors self-end"
+                                    title="Delete custom field"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* AI ANUBIS CONFIGURATION */}

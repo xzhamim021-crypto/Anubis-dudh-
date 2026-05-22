@@ -11,11 +11,18 @@ export interface SocialLink {
   url: string;
 }
 
+export interface AboutField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 export interface AboutMe {
   myName: string;
   dadName: string;
   momName: string;
   age: string;
+  customFields?: AboutField[];
 }
 
 export interface AISettings {

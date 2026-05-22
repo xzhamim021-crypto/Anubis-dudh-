@@ -17,8 +17,7 @@ export default function SplashLoader({ onComplete, siteName }: SplashLoaderProps
     const subheadings = [
       "loading ambient frequencies...",
       "streaming high-fidelity visuals...",
-      "polishing glass surfaces...",
-      "calibrating cinematic projectors..."
+      "polishing glass surfaces..."
     ];
 
     const interval = setInterval(() => {
