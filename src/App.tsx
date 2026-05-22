@@ -47,8 +47,53 @@ const AVAILABLE_FONTS = [
   { id: "JetBrains Mono", class: "font-mono" }
 ] as const;
 
+const DEFAULT_CLIENT_SETTINGS: SiteSettings = {
+  siteName: "Aria Sterling",
+  siteTitle: "cinematic daydreaming",
+  bio: "21. digital artist & storyteller. capturing ephemeral feelings, neon dreams, and midnight drives. welcome to my safe space.",
+  fontFamily: "Space Grotesk",
+  themeAccent: "rose",
+  videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-starry-night-sky-over-a-gentle-ocean-40939-large.mp4",
+  audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+  audioTitle: "Reflections of Midnight",
+  audioArtist: "Ambient Lab & Luna",
+  floatingQuotes: [
+    "we are all just stories in the end.",
+    "collecting quiet moments before they fade.",
+    "nostalgia is a file we download when we are lonely.",
+    "neon glow and warm rain.",
+    "there is a beautiful poetry in everyday chaos."
+  ],
+  socialLinks: [
+    { platform: "Instagram", url: "https://instagram.com" },
+    { platform: "TikTok", url: "https://tiktok.com" },
+    { platform: "Spotify", url: "https://spotify.com" },
+    { platform: "Pinterest", url: "https://pinterest.com" }
+  ],
+  memories: [
+    {
+      id: "1",
+      title: "midnight drives in the fog",
+      description: "listening to slow-reverb songs, watching streetlights blur.",
+      imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80",
+      date: "May 2026"
+    }
+  ],
+  adminPasscode: "1111",
+  aboutMe: {
+    myName: "Aria Sterling",
+    dadName: "Edward Sterling",
+    momName: "Elena Sterling",
+    age: "21"
+  },
+  aiSettings: {
+    anubisAvatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80",
+    hamimPicUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+  }
+};
+
 export default function App() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_CLIENT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(false);
   const [videoMuted, setVideoMuted] = useState(true);
@@ -137,10 +182,6 @@ export default function App() {
       });
     }
   }, [unlocked, settings?.videoUrl]);
-
-  if (isLoading || !settings) {
-    return <SplashLoader onComplete={() => setUnlocked(true)} siteName="" />;
-  }
 
   const activeAccent = AVAILABLE_ACCENTS.find(a => a.id === settings.themeAccent) || AVAILABLE_ACCENTS[0];
   const activeFont = AVAILABLE_FONTS.find(f => f.id === settings.fontFamily) || AVAILABLE_FONTS[0];
@@ -315,20 +356,33 @@ export default function App() {
             key="splash-overlay-wrapper"
             onComplete={() => {
               setUnlocked(true);
-              // Handle immediate audio and video playing on mobile/computer within exact same user interaction tick
-              setTimeout(() => {
+              // Handle immediate audio and video playing synchronously inside the user-gesture click tick
+              try {
                 const audioEl = document.querySelector("audio");
                 if (audioEl) {
-                  audioEl.play().catch(err => {
-                    console.log("Interactive sound playback triggered failed or was muted:", err);
-                  });
+                  const p = audioEl.play();
+                  if (p && typeof p.catch === "function") {
+                    p.catch(err => {
+                      console.log("Synchronous interactive audio playback prevented:", err);
+                    });
+                  }
                 }
+              } catch (audioErr) {
+                console.error("Audio trigger synchronous error:", audioErr);
+              }
+
+              try {
                 if (videoRef.current) {
-                  videoRef.current.play().catch(err => {
-                    console.log("Interactive video playback triggered failed:", err);
-                  });
+                  const p = videoRef.current.play();
+                  if (p && typeof p.catch === "function") {
+                    p.catch(err => {
+                      console.log("Synchronous interactive video playback prevented:", err);
+                    });
+                  }
                 }
-              }, 40);
+              } catch (videoErr) {
+                console.error("Video trigger synchronous error:", videoErr);
+              }
             }} 
             siteName={settings.siteName} 
           />
